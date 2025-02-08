@@ -36635,6 +36635,28 @@ static JSValue js_object_getOwnPropertySymbols(JSContext *ctx, JSValue this_val,
                                    JS_GPN_SYMBOL_MASK, JS_ITERATOR_KIND_KEY);
 }
 
+void JS_Suspend(JSRuntime *rt, JSRuntimeThreadState *state)
+{
+    JSRuntimeInternalThreadState *s = (JSRuntimeInternalThreadState *)state;
+    s->stack_top = rt->stack_top;
+    s->current_exception = rt->current_exception;
+    s->current_stack_frame = rt->current_stack_frame;
+    memcpy(&s->job_list, &rt->job_list, sizeof(rt->job_list));
+    rt->stack_top = NULL;
+    rt->current_exception = JS_NULL;
+    rt->current_stack_frame = NULL;
+    init_list_head(&rt->job_list);
+}
+void JS_Resume(JSRuntime *rt, const JSRuntimeThreadState *state)
+{
+    const JSRuntimeInternalThreadState *s =
+        (const JSRuntimeInternalThreadState *)state;
+    rt->stack_top = s->stack_top;
+    rt->current_exception = s->current_exception;
+    rt->current_stack_frame = s->current_stack_frame;
+    list_splice(&s->job_list, &rt->job_list);
+}
+
 static JSValue js_object_groupBy(JSContext *ctx, JSValue this_val,
                                  int argc, JSValue *argv)
 {
